@@ -1,0 +1,10 @@
+
+rule all:
+	''
+	input:
+		'results/geno/subsample/related-chr22.vcf.gz',
+		'results/geno/phased/related-chr22.bcf'
+
+include: "rules/common.smk"
+include: "rules/subset_trios.smk"
+include: "rules/phasing.smk"
