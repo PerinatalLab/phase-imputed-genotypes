@@ -36,8 +36,8 @@ mom_duos= d.loc[(~d.dad.str.contains('_')) & (d.mom.str.contains('_')), :]
 kin_dad_duos= pd.merge(kin, dad_duos, left_on= ['ID1', 'ID2'], right_on= ['IID', 'dad'])
 kin_mom_duos= pd.merge(kin, mom_duos, left_on= ['ID1', 'ID2'], right_on= ['IID', 'mom'])
 
-dad_duos= dad_duos.loc[dad.duos.IID.isin(kin_dad_duos.IID.values), :]
-mom_duos= mom_duos.loc[mom.duos.IID.isin(kin_mom_duos.IID.values), :]
+dad_duos= dad_duos.loc[dad_duos.IID.isin(kin_dad_duos.IID.values), :]
+mom_duos= mom_duos.loc[mom_duos.IID.isin(kin_mom_duos.IID.values), :]
 pedigree= pd.concat([trios, dad_duos, mom_duos])
 
 related_ids= pd.concat([trios[['FID', 'IID']], dad_duos[['FID', 'IID']], mom_duos[['FID', 'IID']]])
@@ -46,10 +46,11 @@ related_ids= pd.concat([trios[['FID', 'IID']], dad_duos[['FID', 'IID']], mom_duo
 
 sind= d.loc[~d.IID.isin(related_ids.IID.values), :]
 
+sind.to_csv(snakemake.output[1], sep= '\t', header= False, index= False, columns= ['FID', 'IID'])
+related_ids.to_csv(snakemake.output[0], sep= '\t', header= False, index= False, columns= ['FID', 'IID'])
+
+
 related_ids['IID']= related_ids.FID + '_' + related_ids.IID
 sind['IID']= sind.FID + '_' + sind.IID
 
-pedigree.to_csv(output[2], sep= '\t', header= False, index= False, columns= ['IID', 'dad', 'mom'])
-sind.to_csv(output[1], sep= '\t', header= False, index= False, columns= ['IID'])
-related_ids.to_csv(output[0], sep= '\t', header= False, index= False, columns= ['IID'])
-
+pedigree.to_csv(snakemake.output[2], sep= '\t', header= False, index= False, columns= ['IID', 'dad', 'mom'])
