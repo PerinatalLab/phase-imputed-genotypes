@@ -1,0 +1,19 @@
+name: R-plots
+channels:
+    - bioconda
+    - conda-forge
+dependencies:
+    - r-dplyr=1.0.10
+    - r-data.table=1.14.2
+    - r-base=4.1.1
+    - zlib=1.2.11
+    - r-r.utils
+    - r-showtext
+    - r-cowplot=1.1.1
+    - r-ggrepel=0.9.1
+    - r-tidyr=1.2.0
+    - r-ggplot2=3.4.0
+    - r-broom=0.8.0
+    - r-cairodevice
+    - r-ggh4x
+    - r-rmarkdown
