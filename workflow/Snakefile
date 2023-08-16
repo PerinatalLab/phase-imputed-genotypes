@@ -6,5 +6,6 @@ rule all:
 
 include: "rules/common.smk"
 include: "rules/subset_trios.smk"
-include: "rules/phase_related.smk"
+include: "rules/phase_haplotypes.smk"
 include: "rules/test_phasing.smk"
+include: "rules/filter-data.smk"
