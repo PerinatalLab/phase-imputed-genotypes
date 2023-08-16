@@ -1,0 +1,159 @@
+---
+title: "Phasing imputed genetic data: switch error rate"
+author: "Pol Sole Navais"
+date: "`r Sys.Date()`"
+output:
+    html_document:
+        toc: true
+        toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+```
+
+```{r}
+library(data.table)
+library(dplyr)
+library(ggplot2)
+
+```
+
+## What is this document?    
+
+This document provides a comparison of two pipelines for phasing the imputed data from MoBaPsychGen data (ie, hard called imputed genotype data). We will use the *switch error rate* as a measure of phasing accuracy.   
+
+## What is the switch error rate  
+
+From [Browning BL and Browning SH](https://doi.org/10.1016/j.ajhg.2022.04.019).
+
+It's a standard measure of phase accuracy for genome-scale data, the proportion of pairs of consecutive heterozygotes that are incorrectly phased. Switch error rate is usually calculated using Mendelian-phased heterozygotes in trio/ duos offspring as the true phase. Mendelian phasing infers the paternally-inherited and maternally-inherited alleles in an offspring from parental genotypes and Mendelian inheritance constraints.  
+
+## SHAPEIT5 pipeline  
+
+[SHAPEIT5](https://odelaneau.github.io/shapeit5/) can phase genotype data including trios and is proven to be quicker relative to its previous versions. To note, MoBaPsychGen data was pre-phased (before genotype imputation) using SHAPEIT2, phasiong duos/ trios using the --duo-hmm flag. In the newest version of SHAPEIT, duos/ trios are phased separately. Then, the phased haplotypes can be used as a scaffold to phase individuals without parents/ offspring (from now on, unrelated samples).  
+
+When duos/ trios are available, the pipeline to phase QC'ed genotype array data with SHAPEIT5 looks as follows:  
+
+1. Generate two vcf files: one with duos/ trios and the other with unrelated samples  
+2. Phase duos/ trios using SHAPEIT5  
+3. Use the phased haplotypes from **2** as a scaffold to phase the unrelated samples  
+4. Merge phased data from 2 and 3.  
+
+
+## Phasing imputed genetic data with SHAPEIT5  
+
+Phasing of imputed genetic data is different because we want to phase all sites, no matter how confident we are on the imputation quality. Phasing of imputed genetic data is not documented in SHAPEIT5, so we need to find ways to have the best phasing accuracy. This is open for discussion, but here we present **two different pipelines** (based on SHAPEIT5) to impute our data.  
+
+The first pipeline consists of using all sites from all trios/ duos in a single run, as in the pipeline above. That is, we keep all markers, no matter the imputation quality, allele frequency, etc. The second consists on phasing only sites for which we have a high confidence in (feel free to choose arbitrary parameters), and then use the phased haplotypes to phase the remaining sites with worse quality. By intuition, this pipeline is computationally more intensive, but should also provide higher accuracy. This second "*good*" pipeline would look as follows:  
+
+1. Generate three vcf files: two with duos/ trios (one with all sites, another only with high-quality sites) and the other with unrelated samples (all sites)  
+2. Phase duos/ trios (good-quality sites) using SHAPEIT5  
+3. Use the phased haplotypes from 2 as a scaffold to phase the remaining sites in duos/ trios
+4. Use the phased haplotypes from 2 as a scaffold to phase all sites unrelated samples  
+5. Merge phased data from 3 and 4.  
+
+For each of the two pipelines, we will estimate the switch error rate. Importantly, the two pipelines have exactly the same samples.  
+
+## Estimating the switch error rate
+
+The estimation of switch error rate requires a ground-truth. Fortunately, we have access to plenty of duos/ trios that we will use for phasing these samples. Shortly, we phase duos/ trios together (using the flag --pedigree), using either of the two pipelines. Then we will phase children without including their parents, which equates to phasing unrelated samples. The switch error rate is then estimated using the duos/ trios phased as a validation.  
+
+The data set in which parents are excluded is the same for the two pipelines, ensuring that the differences in errors are not due to differing samples.  
+
+## Data used  
+
+```{r trios}
+related = fread(snakemake@input[[1]], h=F)
+names(related)= c('IID', 'dad', 'mom')
+
+bim_full= fread(snakemake@input[[2]], h=F)
+bim_full= filter(bim_full, V1== 22)
+good_data= readLines(snakemake@input[[3]])
+good_snps= nrow(filter(bim_full, V2 %in% good_data))
+```
+
+We will pull out all the stops by using all duos/ trios, including `r nrow(filter(related, !is.na(dad), !is.na(mom)))` parent-offspring trios, `r nrow(filter(related, is.na(dad), !is.na(mom)))` mother-child duos and `r nrow(filter(related, !is.na(dad), is.na(mom)))` father-child duos. To minimize the number of sites to phase, we will focus on chromosome 22, with `r nrow(bim_full)` site in total, and `r good_snps` sites when phasing the "*good*" data.  
+
+Having father-child duos is sort of odd, but it may occur whenever the maternal sample was lost due to QC issues (at some stage) or because consents was withdrawn.  
+
+## Switch error rate  
+
+```{r echo=FALSE}
+
+all_ser= fread(snakemake@input[[4]], col.names= c('IID', 'errors', 'hets', 'SER'), h=F)
+good_ser= fread(snakemake@input[[5]], col.names= c('IID', 'errors', 'hets', 'SER'), h=F)
+
+all_SER= round((sum(all_ser$errors) * 100) / sum(all_ser$hets), 3)
+good_SER= round((sum(good_ser$errors) * 100) / sum(good_ser$hets), 3)
+```
+
+Well, after a few hours and some CO2 to the atmosphere, here are the two numbers we want to compare.  
+
+Switch error rate phasing all sites at once: **`r all_SER`**  
+
+Switch error rate with two step phasing: **`r good_SER`**  
+
+## Switch error rate by MAF  
+
+```{r echo=FALSE}
+good_ser_by_maf= fread(snakemake@input[[6]], col.names= c('MAC', 'errors', 'hets', 'SER')) # good_ser_by_maf= fread('/mnt/work/pol/phase-imputed-genotypes/results/test/switch/allsites-good/related-chr22.frequency.switch.txt.gz', col.names= c('MAC', 'errors', 'hets', 'SER'))
+good_ser_by_maf$pipe= 'good'
+
+all_ser_by_maf= fread(snakemake@input[[7]], col.names= c('MAC', 'errors', 'hets', 'SER')) # all_ser_by_maf= fread('/mnt/work/pol/phase-imputed-genotypes/results/test/switch/all/related-chr22.frequency.switch.txt.gz', col.names= c('MAC', 'errors', 'hets', 'SER'))
+all_ser_by_maf$pipe= 'all'
+
+ser_by_maf= rbind(good_ser_by_maf, all_ser_by_maf)
+ser_by_maf= group_by(ser_by_maf, pipe, round(MAC / 316864, 2))  %>% summarize(m_SER= mean(SER), se_SER= sd(SER)/sqrt(length(SER))) %>% ungroup()
+
+names(ser_by_maf)= c('pipe','MAF', 'm_SER', 'se_SER')
+
+ggplot(ser_by_maf, aes(MAF, m_SER)) + 
+  geom_pointrange(aes(ymin= m_SER - se_SER, ymax= m_SER + se_SER), size= 0.1) +
+  xlab('MAF') +
+  ylab('Switch Error Rate, %') +
+  facet_wrap(vars(pipe), nrow= 1, ncol= 2)
+
+```
+
+## Benchmarking  
+
+```{r echo=FALSE}
+
+all_addcount= fread(snakemake@input[[8]]) 
+all_addcount$task= 'Add AC'
+
+all_phase= fread(snakemake@input[[9]]) 
+all_phase$task= 'Phase'
+all_bench= rbind(all_addcount, all_phase)
+
+good_addcount= fread(snakemake@input[[10]]) 
+good_addcount$task= 'Add AC'
+good_pedigree= fread(snakemake@input[[11]]) 
+good_pedigree$task= 'Phase good sites'
+good_allsites= fread(snakemake@input[[12]]) 
+good_allsites$task= 'Phase all sites with scaffold'
+good_bench= rbind(good_addcount, good_pedigree)
+good_bench= rbind(good_bench, good_allsites)
+
+```
+
+Table with benchmarking for phasing all sites at once:  
+
+```{r echo=FALSE}
+
+all_bench[, c(11, 2, 10)]
+```
+
+In total, phasing all sites at once took `r round((sum(all_bench$s)/ 60)/ 60, 2)` hours. This only counts the phasing and adding AC to the vcf, but not filtering (samples and chr 22) from the larger bfile provided with MoBaPsychGen. 
+
+
+
+Table with benchmarking for two stage phasing:  
+
+```{r echo=FALSE}
+
+good_bench[, c(11, 2, 10)]
+```
+
+In total, phasing all sites at once took `r round((sum(good_bench$s)/ 60)/ 60, 2)` hours. This only counts the proper phasing and adding AC to the vcf, but not filtering (samples and chr 22) the data from the larger bfile provided with MoBaPsychGen. 
