@@ -40,7 +40,15 @@ dad_duos= dad_duos.loc[dad_duos.IID.isin(kin_dad_duos.IID.values), :]
 mom_duos= mom_duos.loc[mom_duos.IID.isin(kin_mom_duos.IID.values), :]
 pedigree= pd.concat([trios, dad_duos, mom_duos])
 
-related_ids= pd.concat([trios[['FID', 'IID']], dad_duos[['FID', 'IID']], mom_duos[['FID', 'IID']]])
+related_ids= pd.concat([pedigree[['FID', 'IID']], pedigree[['FID', 'dad']], pedigree[['FID', 'mom']]])
+related_ids['IID']= np.where(related_ids.IID.isna(), related_ids.dad, related_ids.IID)
+related_ids['IID']= np.where(related_ids.IID.isna(), related_ids.mom, related_ids.IID)
+related_ids= related_ids.loc[related_ids.IID.str.contains('_'), :]
+related_ids.drop_duplicates(['FID', 'IID'], inplace= True, keep= 'first')
+
+pedigree['dad']= np.where(~pedigree.dad.str.contains('_'), 'NA', pedigree.FID + '_' + pedigree.dad)
+pedigree['mom']= np.where(~pedigree.mom.str.contains('_'), 'NA', pedigree.FID + '_' + pedigree.mom)
+pedigree['IID']= pedigree.FID + '_' + pedigree.IID
 
 # non related individuals - aka, individuals without parents/ offspring
 
