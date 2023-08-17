@@ -7,7 +7,7 @@ rule phase_related_samples:
                 'genetic_maps.b37.tar.gz',
                 'results/geno/plink/related/temp/related-chr{CHR}.vcf.gz.tbi'
         output:
-                temp('results/phased-haplotypes/temp/related/related-chr{CHR}.bcf'
+                temp('results/phased-haplotypes/temp/related/related-chr{CHR}.bcf')
         threads: 10
         log:
                 'logs/phasing/shapeit5-phasing-related-chr{CHR}-log.txt'
@@ -43,12 +43,24 @@ rule phase_unrelated_samples:
 rule merge_bcf:
 	'Merge phased bcfs from related and unrelated samples into a vcf.'
 	input:
-		''
+		'results/phased-haplotypes/temp/related/related-chr{CHR}.bcf',
+		'results/phased-haplotypes/temp/unrelated/unrelated-chr{CHR}.bcf'
 	output:
-		''
+		temp('results/phased/haplotypes/delivery/temp/phased-MoBaPsychGen-chr{CHR}.vcf')
 	run:
-		''
+		vcfs= [i.replace(',', '') for i in input]
+		shell('bcftools merge {vcfs} -Ov -o {output[0]}')
 
 rule bgzip_index_phased_vcf:
 	'Block gzip and index phased vcf files.'
+	input:
+		'results/phased/haplotypes/delivery/temp/phased-MoBaPsychGen-chr{CHR}.vcf'
+	output:
+		'results/phased/haplotypes/delivery/phased-MoBaPsychGen-chr{CHR}.vcf.gz',
+		'results/phased/haplotypes/delivery/phased-MoBaPsychGen-chr{CHR}.vcf.gz.tbi'
+	shell:
+		'''
+		bgzip -c {input[0]} > {output[0]}
+		tabix -p vcf {output[0]}
+		'''
 
