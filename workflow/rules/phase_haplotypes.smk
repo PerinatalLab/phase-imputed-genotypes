@@ -13,6 +13,7 @@ rule phase_related_samples:
                 'logs/phasing/shapeit5-phasing-related-chr{CHR}-log.txt'
         benchmark:
                 'benchmarks/phasing/benchmark-shapeit5-phasing-related-chr{CHR}.txt'
+	priority: 2
         shell:
                 '''
                 /home/pol.sole.navais/soft/SHAPEIT5/phase_common_static --input {input[0]} --pedigree {input[1]} --region {wildcards.CHR} --map {input[2]} --output-format bcf --output {output[0]} --thread {threads} --log {log}
@@ -34,14 +35,15 @@ rule phase_all_samples:
                 'logs/phasing/shapeit5-phasing-all-chr{CHR}-log.txt'
 	benchmark:
                 'benchmarks/phasing/benchmark-shapeit5-phasing-all-chr{CHR}.txt'
+	priority: 3
 
 	shell:
                 '''
 		/home/pol.sole.navais/soft/SHAPEIT5/phase_common_static --input {input[0]} --region {wildcards.CHR} --map {input[2]} --scaffold {input[3]} --output-format bcf --output {output[0]} --thread {threads} --log {log}
                 '''
 
-rule merge_bcf:
-	'Merge phased bcfs from related and unrelated samples into a vcf.'
+rule convert_bcf:
+	'Convert bcfs from related and unrelated samples into a vcf.'
 	input:
 		'results/phased-haplotypes/temp/all/all-chr{CHR}.bcf'
 	output:

@@ -27,10 +27,11 @@ rule add_AC:
 	input:
                 'results/geno/plink/{samples}/temp/{samples}-chr{CHR}.vcf.gz'
 	output:
-                'results/geno/plink/{samples}/{samples}-chr{CHR}.vcf.gz',
-                'results/geno/plink/{samples}/{samples}-chr{CHR}.vcf.gz.tbi'
+                temp('results/geno/plink/{samples}/{samples}-chr{CHR}.vcf.gz'),
+                temp('results/geno/plink/{samples}/{samples}-chr{CHR}.vcf.gz.tbi')
 	benchmark:
                 'benchmarks/geno/plink/{samples}-chr{CHR}-add-AC.txt'
+	priority: 1
 	shell:
                 '''
                 bcftools +fill-tags {input[0]} -Oz -o {output[0]}
