@@ -49,6 +49,7 @@ rule convert_bcf:
 	output:
 		temp('results/phased/haplotypes/delivery/temp/phased-MoBaPsychGen-chr{CHR}.vcf')
 	threads: 2
+	priority: 4
 	shell:
 		'bcftools convert -Ov -o {output[0]} {input[0]}'
 

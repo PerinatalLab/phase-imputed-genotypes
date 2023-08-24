@@ -31,7 +31,6 @@ rule add_AC:
                 temp('results/geno/plink/{samples}/{samples}-chr{CHR}.vcf.gz.tbi')
 	benchmark:
                 'benchmarks/geno/plink/{samples}-chr{CHR}-add-AC.txt'
-	priority: 1
 	shell:
                 '''
                 bcftools +fill-tags {input[0]} -Oz -o {output[0]}
