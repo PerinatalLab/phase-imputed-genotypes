@@ -4,7 +4,7 @@ rule phase_related_samples:
         input:
                 'results/geno/plink/related/related-chr{CHR}.vcf.gz',
                 'results/aux/subsample/pedigree_SHAPEIT5/pedigree-parent-offspring-IIDs.txt',
-                'resources/genetic_maps.b37.tar.gz',
+                'resources/chr{CHR}.b37.gmap.gz',
                 'results/geno/plink/related/related-chr{CHR}.vcf.gz.tbi'
         output:
                 temp('results/phased-haplotypes/temp/related/related-chr{CHR}.bcf')
