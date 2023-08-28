@@ -4,11 +4,12 @@ CHR_nms= [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
 rule all:
 	'Collect all these files.'
 	input:
-		'report/test-phase-pipeline.html',
-		expand('results/phased/haplotypes/delivery/phased-MoBaPsychGen-chr{CHR}.vcf.gz', CHR= CHR_nms)
+#		'report/test-phase-pipeline.html',
+		expand('results/phased-haplotypes/temp/related/related-chr{CHR}.bcf', CHR= CHR_nms) #results/phased/haplotypes/delivery/phased-MoBaPsychGen-chr{CHR}.vcf.gz', CHR= CHR_nms)
 
 include: "rules/common.smk"
 include: "rules/subset_trios.smk"
 include: "rules/phase_haplotypes.smk"
 include: "rules/test_phasing.smk"
 include: "rules/filter-data.smk"
+include: "rules/chunk.smk"
