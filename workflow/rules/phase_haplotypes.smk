@@ -12,19 +12,27 @@ checkpoint phase_related:
 #		temp('results/phased-haplotypes/temp/related/related-chr{CHR}.bcf')
 	params:
 		'results/phased-haplotypes/temp/related/chunks/{CHR}/',
-		'results/phased-haplotypes/temp/related/chunks/logs/{CHR}-'
+		'results/phased-haplotypes/temp/related/chunks/logs/{CHR}-',
+		'results/phased-haplotypes/temp/related/chunks/logs/'
 	threads: 10
 	priority: 2
 	run:
-		chunk= pd.read_csv(input[3], sep= '\t', header= None, names= ['num', 'CHR', 'pos1', 'pos2'])
+		chunk= pd.read_csv(input[3], sep= '\t', header= None, names= ['numi', 'CHR', 'pos1', 'pos2', 'x1', 'x2', 'x3', 'x4'])
+		try:
+			os.makedirs(params[2])
+		except FileExistsError:
+			# directory already exists
+			pass
 		for index, row in chunk.iterrows():
-			outfile= params[0] + 'chunk' + row['pos1'] + '.txt'
-			logs= params[1] + 'chunk' + row['pos1'] + '.txt'
-                	shell("/home/pol.sole.navais/soft/SHAPEIT5/phase_common_static --input {input[0]} --pedigree {input[1]} --region {row['pos1']} --map {input[2]} --output-format bcf --output {outfile} --thread {threads} --log {logs}")
+			pos1= row['pos1']
+			print(pos1)
+			outfile= params[0] + 'chunk' + str(row['numi']) + '.bcf'
+			logs= params[1] + 'chunk' + str(row['numi']) + '.txt'
+                	shell("/home/pol.sole.navais/soft/SHAPEIT5/phase_common_static --input {input[0]} --pedigree {input[1]} --region {pos1} --map {input[2]} --output-format bcf --output {outfile} --thread {threads} --log {logs}")
 
 def aggregate_chunks(wildcards):
 	checkpoint_output = checkpoints.phase_related.get(**wildcards).output[0]
-	return expand("results/phased-haplotypes/temp/related/chunks/{{CHR}}/chunks{chunk_id}.txt", chunk_id=glob_wildcards(os.path.join(checkpoint_output, "chunks{chunk_id}.txt")).chunk_id)
+	return expand("results/phased-haplotypes/temp/related/chunks/{{CHR}}/chunks{chunk_id}.bcf", chunk_id=glob_wildcards(os.path.join(checkpoint_output, "chunks{chunk_id}.bcf")).chunk_id)
 
 rule list_chunk_files:
 	'Write chunk file names in a new file.'
@@ -69,7 +77,7 @@ checkpoint phase_all_samples_chunks:
 	threads: 10
 	priority: 3
 	run:
-		chunk= pd.read_csv(input[4], sep= '\t', header= None, names= ['num', 'CHR', 'pos1', 'pos2'])
+		chunk= pd.read_csv(input[4], sep= '\t', header= None, names= ['numi', 'CHR', 'pos1', 'pos2', 'x1', 'x2', 'x3', 'x4'])
 		for index, row in chunk.iterrows():
                 	outfile= params[0] + 'chunk' + row['pos1'] + '.txt'
                 	logs= params[1] + 'chunk' + row['pos1'] + '.txt'
