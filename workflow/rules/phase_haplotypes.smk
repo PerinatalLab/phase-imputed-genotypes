@@ -36,7 +36,7 @@ checkpoint phase_all:
 
 def aggregate_chunks(wildcards):
 	checkpoint_output = checkpoints.phase_all.get(**wildcards).output[0]
-	return expand("results/phased-haplotypes/temp/all/chunks/{{CHR}}/chunks{chunk_id}.bcf", chunk_id=glob_wildcards(os.path.join(checkpoint_output, "chunks{chunk_id}.bcf")).chunk_id)
+	return expand("results/phased-haplotypes/temp/all/chunks/{{CHR}}/chunk{chunk_id}.bcf", chunk_id=glob_wildcards(os.path.join(checkpoint_output, "chunk{chunk_id}.bcf")).chunk_id)
 
 rule list_chunk_files:
 	'Write chunk file names in a new file.'
@@ -46,9 +46,9 @@ rule list_chunk_files:
 		'results/phased-haplotypes/temp/all/list_of_chunks/CHR{CHR}.txt'
 	priority: 4
 	run:
-		d= input.sort()
+		d= sorted(input, key=lambda s: int(re.findall(r'\d+', s)[1]))
 		with open(output[0], 'w') as f:
-			for line in lines:
+			for line in d:
 				f.write(f'{line}\n')
 
 rule ligate_all:
@@ -91,3 +91,12 @@ rule bgzip_index_phased_vcf:
 		tabix -p vcf {output[0]}
 		'''
 
+rule check_phased_vcf:
+	'Check that vcf files have the correct number of SNPs and samples.'
+	input:
+		'results/phased/haplotypes/delivery/phased-MoBaPsychGen-chr{CHR}.vcf.gz',
+		'results/phased/haplotypes/delivery/phased-MoBaPsychGen-chr{CHR}.vcf.gz.tbi'
+	output:
+		'results/phased/haplotypes/checks/stats-phased-MoBaPsychGen-chr{CHR}.txt'
+	shell:
+		'bcftools stats {input[0]} > {output[0]}'
