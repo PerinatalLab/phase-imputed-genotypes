@@ -5,8 +5,8 @@ rule all:
 	'Collect all these files.'
 	input:
 #		'report/test-phase-pipeline.html',
-		expand('results/phased/haplotypes/delivery/phased-MoBaPsychGen-chr{CHR}.vcf.gz', CHR= CHR_nms),
-		expand('results/phased/haplotypes/checks/stats-phased-MoBaPsychGen-chr{CHR}.txt', CHR= CHR_nms)#results/phased/haplotypes/delivery/phased-MoBaPsychGen-chr{CHR}.vcf.gz', CHR= CHR_nms)
+		expand('results/delivery/phased-MoBaPsychGen-chr{CHR}.vcf.gz', CHR= CHR_nms),
+		expand('results/checks/stats-phased-MoBaPsychGen-chr{CHR}.txt', CHR= CHR_nms)#results/phased/haplotypes/delivery/phased-MoBaPsychGen-chr{CHR}.vcf.gz', CHR= CHR_nms)
 
 include: "rules/common.smk"
 include: "rules/subset_trios.smk"

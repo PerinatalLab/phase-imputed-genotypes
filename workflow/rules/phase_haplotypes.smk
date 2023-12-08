@@ -91,12 +91,49 @@ rule bgzip_index_phased_vcf:
 		tabix -p vcf {output[0]}
 		'''
 
+rule extract_samples:
+	'List vcf samples.'
+	input:
+		'results/phased/haplotypes/delivery/phased-MoBaPsychGen-chr{CHR}.vcf.gz'
+	output:
+		temp('results/aux/vcf_ids/{CHR}.txt')
+	shell:
+		'bcftools query -l {input[0]} > {output[0]}'
+
+rule new_sample_file:
+	'Create a file with same order as original, with new sample IDs.'
+	input:
+		'results/aux/vcf_ids/{CHR}.txt',
+		'/mnt/archive/moba/geno/MobaPsychgenReleaseMarch23/MoBaPsychGen_v1/MoBaPsychGen_v1-ec-eur-batch-basic-qc.fam'
+	output:
+		'results/aux/only_IIDs/{CHR}.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= None, names= ['FID_IID'])
+		x= pd.read_csv(input[1], header= None, names= ['FID', 'IID', 'dad', 'mom', 'sex', 'pheno'], sep= ' ')
+		x['FID_IID']= x.FID + '_' + x.IID
+		d= d.merge(x[['FID_IID', 'IID']], on= 'FID_IID', how= 'left')
+		d.to_csv(output[0], header= False, index= False, columns= ['IID'], sep= '\t')
+
+rule reheader_vcf:
+	'Change sample names vcf.'
+	input:
+		'results/phased/haplotypes/delivery/phased-MoBaPsychGen-chr{CHR}.vcf.gz',
+		'results/aux/only_IIDs/{CHR}.txt'
+	output:
+		'results/delivery/phased-MoBaPsychGen-chr{CHR}.vcf.gz',
+		'results/delivery/phased-MoBaPsychGen-chr{CHR}.vcf.gz.tbi'
+	shell:
+		'''
+		bcftools reheader --samples {input[1]} {input[0]} -o {output[0]}
+		tabix -p vcf {output[0]}
+		'''
+
 rule check_phased_vcf:
 	'Check that vcf files have the correct number of SNPs and samples.'
 	input:
-		'results/phased/haplotypes/delivery/phased-MoBaPsychGen-chr{CHR}.vcf.gz',
-		'results/phased/haplotypes/delivery/phased-MoBaPsychGen-chr{CHR}.vcf.gz.tbi'
+		'results/delivery/phased-MoBaPsychGen-chr{CHR}.vcf.gz',
+		'results/delivery/phased-MoBaPsychGen-chr{CHR}.vcf.gz.tbi'
 	output:
-		'results/phased/haplotypes/checks/stats-phased-MoBaPsychGen-chr{CHR}.txt'
+		'results/checks/stats-phased-MoBaPsychGen-chr{CHR}.txt'
 	shell:
 		'bcftools stats {input[0]} > {output[0]}'
